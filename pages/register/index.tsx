@@ -41,18 +41,12 @@ const Register = () => {
   }) => {
     try {
       const res = await dispatch(registerAsync(data));
-      const unwrappedRes = await unwrapResult(res);
-      if (unwrappedRes.error) {
-        toast.error(unwrappedRes.error.message || "Something went wrong");
-      } else {
-        toast.success(unwrappedRes.data.message || "Registered successfully");
-        router.push("/login");
-      }
-    } catch (error: any) {
-      if (error.response.status === 400) {
-        toast.error("Something went wrong");
-      }
-    }
+      if(res.payload) {
+        toast.success(res.payload.message || "Registered successfully");
+      } 
+    } catch (error) {
+      console.log("error", error)
+    }   
   };
 
   return (

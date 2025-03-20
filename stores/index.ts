@@ -8,6 +8,11 @@ import storage from 'redux-persist/lib/storage';
 const persistConfig = {
   key: 'root',
   storage,
+  filter: (state: any) => {
+    const filteredState = { ...state };
+    delete filteredState.register;
+    return filteredState;
+  },
 };
 
 const persistedAuthReducer = persistReducer(persistConfig, auth);
@@ -21,7 +26,9 @@ const store = configureStore({
     messages: persistedMessagesReducer,
   },
   middleware: (getDefaultMiddleware) => getDefaultMiddleware({
-    serializableCheck: false,
+    serializableCheck: {
+      ignoredActions: ['persist/PERSIST'],
+    },
   }),
 });
 

@@ -1,6 +1,7 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, current, isRejectedWithValue, PayloadAction } from "@reduxjs/toolkit";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 interface Message {
   id: number;
@@ -12,34 +13,34 @@ interface Message {
 const initialState = {
   messages: [] as Message[],
   loading: false,
+  totalPages: 0,
+  currentPage: 1,
 };
 
 export const conversationMessages = createAsyncThunk(
   "conversation/fetchMessages",
   async (params: any) => {
-    const token = localStorage.getItem("token");
-    const response = await axios.get(
-      `${process.env.NEXT_PUBLIC_API_URL}/messages?receiverId=${params.id}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/messages?receiverId=${params.id}&page=${params.page}&&count=20`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      return { 
+        message: response.data.message,
+        data: response.data.data
       }
-    );
-    return response.data;
-  }
-);
-
-export const sendMessages = createAsyncThunk(
-  "message/sendMessage",
-  async ({ content, receiverId }: { content: string; receiverId: number }) => {
-    const token = localStorage.getItem("token");
-    const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_URL}/messages`,
-      { content, receiverId },
-      {
-        headers: { Authorization: `Bearer ${token}` },
+    } catch (error: any) {
+      if (error.response) {
+        const message = error.response.data.message || "Something went wrong";
+        toast.error(message);
+        return isRejectedWithValue(message);
+      } else {
+        return isRejectedWithValue("Something went wrong");
       }
-    );
-    return response.data;
+    }
   }
 );
 
@@ -51,8 +52,10 @@ const messageSlice = createSlice({
     builder.addCase(conversationMessages.pending, (state, action) => {
       state.loading = true;
     });
-    builder.addCase(conversationMessages.fulfilled, (state, action) => {
-      state.messages = action.payload.data;
+    builder.addCase(conversationMessages.fulfilled, (state, action: PayloadAction<any>) => {
+      state.messages = action.payload.data.messages;
+      state.totalPages = action.payload.data.totalPage;
+      state.currentPage = action.payload.data.currentPage;
       state.loading = false;
     });
     builder.addCase(conversationMessages.rejected, (state, action) => {

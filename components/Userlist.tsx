@@ -1,13 +1,22 @@
+import { userList } from "@/stores/slices/UserSlice";
+import { unwrapResult } from "@reduxjs/toolkit";
+import { useParams } from "next/navigation";
 import { useRouter } from "next/router";
-import React from "react";
+import React, { use, useEffect } from "react";
+import toast from "react-hot-toast";
+import { useDispatch } from "react-redux";
 
 interface User {
   id: number;
   name: string;
   email: string;
 }
-const Userlist = ({ users, selectedUser }: { users: User , selectedUser?: number }) => {
+const Userlist = ({ users, selectedUser}: { users: User, selectedUser?: number }) => {
   const router = useRouter();
+  const dispatch = useDispatch<any>();
+  // const params = useParams();
+  // console.log("🚀 ~ Userlist ~ params:", params)
+  // const selectedUser = params ? Number(params?.id) : 0;
   const capLetter = (str: String) => {
     return str.charAt(0).toUpperCase();
   };
@@ -15,6 +24,23 @@ const Userlist = ({ users, selectedUser }: { users: User , selectedUser?: number
   const handleClick = (id: number) => {
    router.push(`/chat/user/${id}`);
   };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await dispatch(userList());
+      if(response.payload) {
+         toast.success(response.payload.data.message || "Fetched Users Suceesfully");
+      } 
+    } catch (error) {
+     console.log("error", error)
+    }
+    
+    
+}
+
+useEffect(() => {
+    fetchUsers();
+}, [])
 
   return (
     <div className="flex flex-col w-1/3 border-r-2 border-blue-500 h-screen overflow-y-auto">

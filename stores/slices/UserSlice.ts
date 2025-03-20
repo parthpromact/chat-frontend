@@ -1,6 +1,7 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, isRejectedWithValue, PayloadAction } from "@reduxjs/toolkit";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 interface User {
   id: number;
@@ -15,12 +16,26 @@ const initialState = {
 };
 
 export const userList = createAsyncThunk("users/fetchUsers", async () => {
-  const token = localStorage.getItem("token");
-  const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return response.data.data;
-});
+  try {
+    const token = localStorage.getItem("token");
+    const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return {
+      message: response.data.message,
+      users: response.data.data,
+    };
+  } catch (error: any) {
+    if (error.response) {
+      const message = error.response.data.message || 'Something went wrong';
+      toast.error(message);
+      return isRejectedWithValue(message);
+    } else {
+      return isRejectedWithValue("Something went wrong");
+    }
+  }
+  }
+);
 
 const usersSlice = createSlice({
   name: "users",
@@ -34,8 +49,8 @@ const usersSlice = createSlice({
     builder.addCase(userList.pending, (state, action) => {
       state.loading = true
     });
-    builder.addCase(userList.fulfilled, (state, action) => {
-      state.users = action.payload;
+    builder.addCase(userList.fulfilled, (state, action: PayloadAction<any>) => {
+      state.users = action.payload.users;
       state.loading = false
     });
     builder.addCase(userList.rejected, (state, action) => {

@@ -21,13 +21,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
-      router.push('/chat');
-    } else {
+    if (!token) {
       router.push("/login");
     }
   }, []);
-  
   
   interface LoginParams {
     email: string;
@@ -37,21 +34,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async ({ email, password }: LoginParams) => {
     try {
       const res = await dispatch(loginAsync({ email, password }));
-      const unwrappedRes = await unwrapResult(res);
-      if(unwrappedRes.error) {
-        toast.error(unwrappedRes.error.message || "Something went wrong");
-      } else {
-        toast.success(unwrappedRes.data.message || "Logged in successfully");
+      console.log("🚀 ~ login ~ res:", res)
+      if(res.payload) {
+        toast.success(res.payload.message || "Logged in successfully");
         router.push('/chat');
       }
-    } catch (error: any) {
-      if (error.response.status === 400) {
-        toast.error("Invalid email or password");
-      } else {
-        toast.error("Something went wrong");
-      }
+    } catch (error) {
+      console.log("error:", error)
     }
-  };
+      
+}
 
   const logout = async () => {
     try {

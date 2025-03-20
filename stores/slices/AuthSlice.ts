@@ -1,6 +1,7 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, isRejectedWithValue, PayloadAction } from "@reduxjs/toolkit";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 interface LoginParams {
   email: string;
@@ -34,22 +35,52 @@ const initialState: AuthState = {
 export const loginAsync = createAsyncThunk(
   "auth/login",
   async (params: LoginParams) => {
-    const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_URL}/login`,
-      params
-    );
-    return response.data;
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/login`,
+        params
+      );
+    
+      return {
+        message: response.data.message,
+        data: response.data.data,
+      }; 
+    } catch (error: any) {
+      if (error.response) {
+        const message = error.response.data.message || 'Something went wrong';
+        toast.error(message);
+        return isRejectedWithValue(message);
+      } else {
+        return isRejectedWithValue("Something went wrong");
+      }
+    }
+   
   }
 );
 
 export const registerAsync = createAsyncThunk(
   "auth/login",
   async (params: RegisterParams) => {
-    const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_API_URL}/register`,
-      params
-    );
-    return response.data;
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/register`,
+        params
+      );
+    
+      return {
+        message: response.data.message,
+        data: response.data.data,
+      };
+    } catch (error: any) {
+      if (error.response) {
+        const message = error.response.data.message || 'Something went wrong';
+        toast.error(message);
+        return isRejectedWithValue(message);
+      } else {
+         return isRejectedWithValue("Something went wrong");
+      }
+    }
+   
   }
 );
 
@@ -72,11 +103,11 @@ const authSlice = createSlice({
     builder.addCase(loginAsync.pending, (state, action) => {
       state.loading = true
     });
-    builder.addCase(loginAsync.fulfilled, (state, action) => {
+    builder.addCase(loginAsync.fulfilled, (state, action: PayloadAction<any> ) => {
+      state.user = action.payload?.data?.userData;
+      localStorage.setItem("token", action.payload?.data?.token);
       state.isAuthenticated = true;
-      state.user = action.payload.data.userData;
       state.loading = false
-      localStorage.setItem("token", action.payload.data.token);
     });
     builder.addCase(loginAsync.rejected, (state, action) => {
       state.isAuthenticated = false;
