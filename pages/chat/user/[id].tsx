@@ -10,9 +10,9 @@ import { useDispatch, useSelector } from "react-redux";
 const ChatConversation = () => {
   const dispatch = useDispatch<any>();
   const users = useSelector((state: any) => state.users.users);
-  console.log("🚀 ~ ChatConversation ~ users:", users)
+
   const params = useParams();
-  
+
   const id = useMemo(() => {
     if (params && params.id) {
       return Number(params.id);
@@ -29,13 +29,12 @@ const ChatConversation = () => {
   return (
     <div className="flex">
       <Toaster />
-        <>
-          <Userlist users={users} selectedUser={Number(params?.id)}/>
-          <Chatbody isSelectedUser={true} selectedUserId={Number(params?.id)}/>
-        </>
+      <>
+        <Userlist users={users} selectedUser={Number(params?.id)} />
+        <Chatbody isSelectedUser={true} selectedUserId={Number(params?.id)} />
+      </>
     </div>
   );
 };
 
 export default ChatConversation;
-

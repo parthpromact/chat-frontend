@@ -1,7 +1,5 @@
 import { conversationMessages } from "@/stores/slices/MessageSlice";
-import { unwrapResult } from "@reduxjs/toolkit";
 import axios from "axios";
-import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
@@ -14,33 +12,58 @@ const Chatbody = ({
   isSelectedUser: boolean;
   selectedUserId?: number;
 }) => {
-  const router = useRouter();
   const [message, setMessage] = useState<string>("");
   const dispatch = useDispatch<any>();
   const messages = useSelector((state: any) => state.messages.messages);
   const totalPages = useSelector((state: any) => state.messages.totalPages);
   const currentPage = useSelector((state: any) => state.messages.currentPage);
   const selectedUser = useSelector((state: any) => state.users.userSelected);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState<any>(false);
   const [isModalOpenConfirm, setIsModalOpenConfirm] = useState<any>(false);
   const [isEdit, setIsEdit] = useState<any>(false);
   const [messageId, setMessageId] = useState<number>(0);
+  const chatContainerRef = useRef<any>(null); // ChatRef
+  const prevMsgRef = useRef<any[]>([]); // MessageRef
+  const prevUserIdRef = useRef<any>(undefined); // ref for USer
+  const prevHeight = useRef<number>(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isMain, setIsMain] = useState(true);
+  const [isEditDialog, setIsEditDialog] = useState<any>(false);
+  const [toastDisplayed, setToastDisplayed] = useState(false);
 
-  const chatContainerRef = useRef<HTMLDivElement | null>(null);
+  const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
   useEffect(() => {
-    if (chatContainerRef.current) {
+    if (chatContainerRef.current && !isLoading && currentPage === 1) {
       chatContainerRef.current.scrollTop =
         chatContainerRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isLoading, currentPage]);
+
+  useEffect(() => {
+    if (selectedUserId !== prevUserIdRef.current) {
+      prevMsgRef.current = messages || [];
+      prevUserIdRef.current = selectedUserId;
+    } else if (currentPage > 1) {
+      const existId = new Set(prevMsgRef.current.map((i) => i.id));
+      const newMessage = (messages || []).filter(
+        (v: any) => !existId.has(v.id)
+      );
+      prevMsgRef.current = [...prevMsgRef.current, ...newMessage];
+    } else {
+      prevMsgRef.current = messages || [];
+    }
+  }, [messages, selectedUserId, currentPage]);
 
   useEffect(() => {
     setPage(1);
     if (selectedUserId) {
-      fetchConversation();
+      setMessage("");
+      setIsEdit(false);
+      fetchConversation(1);
+      setHasMore(false);
     }
   }, [selectedUserId]);
 
@@ -49,8 +72,10 @@ const Chatbody = ({
     const handleScroll = () => {
       if (chatContainerRef.current) {
         const { scrollTop } = chatContainerRef.current;
-        if (scrollTop === 0 && hasMore) {
-          setPage((prevPage) => prevPage + 1);
+        if (scrollTop < 50 && currentPage < totalPages && !isLoading) {
+          prevHeight.current = chatContainerRef.current.scrollHeight;
+          setPage(currentPage + 1);
+          fetchConversation(currentPage + 1);
         }
       }
     };
@@ -65,25 +90,48 @@ const Chatbody = ({
         chatContainer.removeEventListener("scroll", handleScroll);
       }
     };
-  }, [hasMore]);
+  }, [currentPage, totalPages, isLoading]);
 
-  const fetchConversation = async () => {
+  useEffect(() => {
+    if (
+      chatContainerRef.current &&
+      isLoading === false &&
+      prevHeight.current > 0
+    ) {
+      const newHeight = chatContainerRef.current.scrollHeight;
+      const heightDifference = newHeight - prevHeight.current;
+      chatContainerRef.current.scrollTop =
+        heightDifference > 0 ? heightDifference : 0;
+      prevHeight.current = 0;
+    }
+  }, [isLoading]);
+
+  const fetchConversation = async (page: number) => {
+    if (isLoading) return;
+    setIsLoading(true);
     try {
       const response = await dispatch(
         conversationMessages({ id: selectedUserId, page })
       );
-      if (response.payload) {
+      if (response?.payload) {
         if (currentPage < totalPages) {
           setHasMore(true);
         } else {
           setHasMore(false);
         }
-        toast.success(
-          response.payload.message || "Fetched messages successfully"
-        );
+
+        if (!toastDisplayed && isMain) {
+          toast.success(
+            response?.payload?.message || "Fetched messages successfully",
+            { id: "messages" }
+          );
+          setToastDisplayed(true);
+        }
       }
     } catch (error) {
-      console.log("error", error)
+      console.log("error", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -104,11 +152,20 @@ const Chatbody = ({
               headers: { Authorization: `Bearer ${token}` },
             }
           );
-          toast.success(response.data.message || "Message edited successfully");
+          if (response.status == 200) {
+            toast.success(
+              response?.data?.message || "Message edited successfully"
+            );
+          }
         } catch (error: any) {
-          toast.error(error.message || "Something went wrong");
+          const errorMessage =
+            error?.response?.data?.message || "Something went wrong";
+          toast.error(errorMessage);
         } finally {
-          router.refresh();
+          setIsEdit(false);
+          setMessage("");
+          setIsMain(false);
+          delay(1000).then(() => fetchConversation(1));
         }
       } else {
         try {
@@ -119,11 +176,20 @@ const Chatbody = ({
               headers: { Authorization: `Bearer ${token}` },
             }
           );
-          toast.success(response.data.message || "Message sent successfully");
+
+          if (response.status == 200) {
+            toast.success(
+              response?.data?.message || "Message sent successfully"
+            );
+          }
         } catch (error: any) {
-          toast.error(error.message || "Something went wrong");
+          const errorMessage =
+            error?.response?.data?.message || "Something went wrong";
+          toast.error(errorMessage);
         } finally {
-          router.refresh();
+          setMessage("");
+          setIsMain(false);
+          delay(1000).then(() => fetchConversation(1));
         }
       }
     }
@@ -133,6 +199,10 @@ const Chatbody = ({
     setMessage(message.content);
     setIsEdit(true);
     setMessageId(message.id);
+    setIsModalOpen((prev: any) => ({
+      ...prev,
+      [message.id]: !prev[message.id],
+    }));
   };
 
   const handleDeleteMessage = async (message: any) => {
@@ -144,27 +214,41 @@ const Chatbody = ({
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      toast.success(response.data.message || "Message deleted successfully");
+      if (response.status == 200) {
+        toast.success(
+          response?.data?.message || "Message deleted successfully"
+        );
+      }
     } catch (error: any) {
-      toast.error(error.message || "Something went wrong");
+      const errorMessage =
+        error?.response?.data?.message || "Something went wrong";
+      toast.error(errorMessage);
     } finally {
-      router.refresh();
+      setIsMain(false);
+      delay(1000).then(() => fetchConversation(1));
     }
   };
 
+  const disMsg = prevMsgRef.current;
+
   return (
-    <div className="bg-gradient-to-bl from-[#A9F1DF] to-[#FFBBBB] h-screen w-2/3 overflow-y-hidden">
+    <div className="bg-gradient-to-bl from-[#A9F1DF] to-[#FFBBBB] h-screen w-2/3 overflow-y-hidden flex flex-col">
       {isSelectedUser ? (
         <>
           <div
             ref={chatContainerRef}
             id="chatContainer"
-            className="flex flex-col items-end space-y-4 overflow-y-auto h-11/12"
+            className="flex flex-col items-end space-y-4 overflow-y-auto flex-grow p-4"
           >
-            {messages && messages.length > 0 ? (
-              [...messages].reverse().map((message: any, index: number) => (
+            {isLoading && currentPage > 1 && (
+              <div className="w-full text-center py-2 text-gray-600">
+                Loading older messages...
+              </div>
+            )}
+            {disMsg && disMsg?.length > 0 ? (
+              [...disMsg].reverse().map((message: any, index: number) => (
                 <div
-                  key={index}
+                  key={message.id || index}
                   className="flex flex-col w-full px-4 items-end"
                 >
                   {message.senderId !== selectedUser ? (
@@ -187,7 +271,10 @@ const Chatbody = ({
                               <ul className="py-1">
                                 <li
                                   className="px-4 py-1 cursor-pointer text-md"
-                                  onClick={() => handleEditMessage(message)}
+                                  onClick={() => {
+                                    setIsEditDialog(true);
+                                    handleEditMessage(message);
+                                  }}
                                 >
                                   Edit
                                 </li>
@@ -213,12 +300,16 @@ const Chatbody = ({
                                         <div className="flex gap-2 mt-4">
                                           <button
                                             className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-700 cursor-pointer"
-                                            onClick={() =>
+                                            onClick={() => {
                                               setIsModalOpenConfirm({
                                                 ...isModalOpenConfirm,
                                                 [message.id]: false,
-                                              })
-                                            }
+                                              });
+                                              setIsModalOpen((prev: any) => ({
+                                                ...prev,
+                                                [message.id]: !prev[message.id],
+                                              }));
+                                            }}
                                           >
                                             Cancel
                                           </button>
@@ -230,6 +321,14 @@ const Chatbody = ({
                                                 ...isModalOpenConfirm,
                                                 [message.id]: false,
                                               });
+                                              setIsModalOpenConfirm({
+                                                ...isModalOpenConfirm,
+                                                [message.id]: false,
+                                              });
+                                              setIsModalOpen((prev: any) => ({
+                                                ...prev,
+                                                [message.id]: !prev[message.id],
+                                              }));
                                             }}
                                           >
                                             Delete
@@ -267,6 +366,37 @@ const Chatbody = ({
             )}
           </div>
           <div className="flex px-2 gap-2">
+            {isEditDialog && (
+              <div className="fixed inset-0 flex items-center justify-center bg-opacity-50 backdrop-blur-xs z-100">
+                <div className="bg-blue-950 w-80 rounded-md shadow-lg p-4">
+                  <div className="flex flex-col items-center py-2">
+                    <p className="text-sm text-center text-white">
+                      Are you sure you want to edit this Message?
+                    </p>
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        className="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-700 cursor-pointer text-xs"
+                        onClick={() => {
+                          setIsEditDialog(false);
+                          setIsEdit(false);
+                          setMessage("");
+                        }}
+                      >
+                        Decline
+                      </button>
+                      <button
+                        className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 cursor-pointer text-xs"
+                        onClick={() => {
+                          setIsEditDialog(false);
+                        }}
+                      >
+                        Accept
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             <input
               type="text"
               value={message}
@@ -275,10 +405,10 @@ const Chatbody = ({
               onChange={(e) => setMessage(e.target.value)}
             />
             <button
-              className="rounded-xl shadow-lg px-10 py-2 bg-gradient-to-tl text-white font-mono  from-[#614385] to-[#516395] hover:scale-105 font-semibold"
+              className="rounded-xl shadow-lg px-10 py-2 bg-gradient-to-tl text-white font-mono  from-[#614385] to-[#516395] hover:scale-105 font-semibold cursor-pointer"
               onClick={messageSent}
             >
-              Send
+              {isEdit ? "Edit" : "Send"}
             </button>
           </div>
         </>

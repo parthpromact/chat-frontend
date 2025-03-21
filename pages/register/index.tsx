@@ -1,4 +1,4 @@
-import React, { use, useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -29,6 +29,7 @@ const Register = () => {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm({ resolver: yupResolver(registerSchema) });
 
@@ -41,12 +42,14 @@ const Register = () => {
   }) => {
     try {
       const res = await dispatch(registerAsync(data));
-      if(res.payload) {
-        toast.success(res.payload.message || "Registered successfully");
-      } 
+      if (res?.payload) {
+        toast.success(res?.payload?.message || "Registered successfully");
+        reset();
+        router.push("/login");
+      }
     } catch (error) {
-      console.log("error", error)
-    }   
+      console.log("error", error);
+    }
   };
 
   return (

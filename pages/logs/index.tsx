@@ -1,5 +1,9 @@
+import { useAuth } from "@/context/AuthProvider";
 import axios from "axios";
+import Link from "next/link";
+import { useRouter } from "next/router";
 import React, { useState, useEffect, useRef } from "react";
+import toast from "react-hot-toast";
 
 interface Log {
   time: string;
@@ -21,10 +25,10 @@ const COLUMNS = [
   { id: "ip", label: "IP Address" },
   { id: "path", label: "Path" },
   { id: "time", label: "Time" },
-  
 ];
 
 const LogsPage = () => {
+  const router = useRouter();
   const [allLogs, setAllLogs] = useState([]);
   const [filteredLogs, setFilteredLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,10 +41,13 @@ const LogsPage = () => {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const dropdownRef = useRef<any>(null);
+  const { isAuthenticated } = useAuth() as any;
 
   useEffect(() => {
-    fetchLogs();
-  }, [from, to]);
+    if (isAuthenticated) {
+      fetchLogs();
+    }
+  }, [isAuthenticated, from, to]);
 
   useEffect(() => {
     if (allLogs.length) {
@@ -48,11 +55,9 @@ const LogsPage = () => {
     }
   }, [from, to, allLogs]);
 
-
   useEffect(() => {
     const handleOutsideClick = (e: any) => {
-      if (dropdownRef.current && 
-        !dropdownRef.current.contains(e.target)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setDropdownOpen(false);
       }
     };
@@ -63,32 +68,46 @@ const LogsPage = () => {
 
   const fetchLogs = async () => {
     setLoading(true);
+    if (to.getTime() < from.getTime()) {
+      toast.error("End time cannot be before start time");
+      return;
+    }
     try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/logs`, {
-        params: {
-          startTime: from.toISOString(),
-          endTime: to.toISOString(),
-        }, 
-        headers: 
-        { 
-            Authorization: `Bearer ${localStorage.getItem("token")}` 
-        },
-      });
+      const res: any = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/logs`,
+        {
+          params: {
+            startTime: from.toISOString(),
+            endTime: to.toISOString(),
+          },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      console.log("🚀 ~ fetchLogs ~ res:", res);
 
-      const logs = res.data.data.map((item: any) => ({
-        time: item.timeofcall,
-        method: item.method,
-        path: item.route,
-        status: item.status || "200",
-        ip: item.ip,
-        username: item.username,
-        userId: item.userId,
-      }));
+      if (res?.status == 200) {
+        toast.success(res?.data?.message || "Log fetched successfully");
+        const logs = res.data.data.map((item: any) => ({
+          time: item.timeofcall,
+          method: item.method,
+          path: item.route,
+          status: item.status || "200",
+          ip: item.ip,
+          username: item.username,
+          userId: item.userId,
+        }));
 
-      setAllLogs(logs);
-      setFilteredLogs(logs);
-    } catch (err) {
-      console.error("Failed to fetch logs:", err);
+        setAllLogs(logs);
+        setFilteredLogs(logs);
+      } else {
+        toast.error(res?.data?.message || "Failed to fetch logs");
+      }
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message || "Something went wrong";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -141,28 +160,46 @@ const LogsPage = () => {
     }
   };
 
-
   return (
     <div className="w-screen h-screen bg-gradient-to-bl from-[#A9F1DF] to-[#FFBBBB]">
       <div className="container mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4 text-purple-950">User Logs</h1>
+        <div className="flex justify-between">
+          <div>
+            <h1 className="text-2xl font-bold mb-4 text-purple-950">
+              User Logs
+            </h1>
+          </div>
+          <div>
+            <button
+              className="flex bg-gradient-to-br from-[#614385] to-[#516395] text-white p-3 font-semibold rounded-md hover:scale-105 cursor-pointer group"
+              style={{ transition: "all 0.2s ease-in-out" }}
+            >
+              <Link href="/chat">Go to Chat</Link>
+              <div className="">
+                <p className="h-4 w-4 ml-2 group-hover:translate-x-1 text-lg">
+                  →
+                </p>
+              </div>
+            </button>
+          </div>
+        </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-4">
           <button
             onClick={() => setTimeRange(5)}
-            className="bg-gradient-to-tl text-white font-mono  from-[#614385] to-[#516395] hover:scale-105 font-semibold py-2 px-4 rounded "
+            className="bg-gradient-to-tl text-white font-mono  from-[#614385] to-[#516395] hover:scale-105 font-semibold py-2 px-4 rounded cursor-pointer"
           >
             Last 5 mins
           </button>
           <button
             onClick={() => setTimeRange(10)}
-            className="bg-gradient-to-tl text-white font-mono  from-[#614385] to-[#516395] hover:scale-105 font-semibold py-2 px-4 rounded "
+            className="bg-gradient-to-tl text-white font-mono  from-[#614385] to-[#516395] hover:scale-105 font-semibold py-2 px-4 rounded cursor-pointer"
           >
             Last 10 mins
           </button>
           <button
             onClick={() => setTimeRange(30)}
-            className="bg-gradient-to-tl text-white font-mono  from-[#614385] to-[#516395] hover:scale-105 font-semibold py-2 px-4 rounded "
+            className="bg-gradient-to-tl text-white font-mono  from-[#614385] to-[#516395] hover:scale-105 font-semibold py-2 px-4 rounded cursor-pointer"
           >
             Last 30 mins
           </button>
@@ -172,18 +209,21 @@ const LogsPage = () => {
               type="datetime-local"
               value={customFrom}
               onChange={(e) => setCustomFrom(e.target.value)}
-              className="border p-2 rounded focus:ring-blue-500"
+              className="border p-2 rounded focus:ring-blue-500 cursor-pointer"
+              max={customTo}
             />
             <span>to</span>
             <input
               type="datetime-local"
               value={customTo}
               onChange={(e) => setCustomTo(e.target.value)}
-              className="border p-2 rounded focus:ring-blue-500"
+              className="border p-2 rounded focus:ring-blue-500 cursor-pointer"
+              min={customFrom}
+              disabled={!customFrom}
             />
             <button
               onClick={applyCustomRange}
-              className="bg-gradient-to-tl text-white font-mono  from-[#614385] to-[#516395] hover:scale-105 font-semibold py-2 px-4 rounded "
+              className="bg-gradient-to-tl text-white font-mono  from-[#614385] to-[#516395] hover:scale-105 font-semibold py-2 px-4 rounded cursor-pointer"
             >
               Apply Filter
             </button>
@@ -193,7 +233,7 @@ const LogsPage = () => {
         <div className="mb-4 relative" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="bg-gradient-to-tl text-white font-mono  from-[#614385] to-[#516395] hover:scale-105 font-semibold py-2 px-4 rounded  flex items-center"
+            className="bg-gradient-to-tl text-white font-mono  from-[#614385] to-[#516395] hover:scale-105 font-semibold py-2 px-4 rounded  flex items-center cursor-pointer"
           >
             Columns ({selectedColumns.length}/{COLUMNS.length})
             <svg
@@ -247,94 +287,96 @@ const LogsPage = () => {
 
         {/* Tailwind Table */}
         <div className="overflow-x-auto shadow-md rounded-lg sticky top-[100px]">
-        <div className="sticky top-0 bg-white z-10">
-          <table className="w-full text-sm text-left text-gray-500">
-            <thead className="bg-gradient-to-tl text-white from-[#614385] to-[#516395] text-xs uppercase sticky top-0 z-20">
-              <tr>
-              {selectedColumns.includes("userId") && (
-                  <th className="px-2 py-3">User ID</th>
-                )}
-                 {selectedColumns.includes("username") && (
-                  <th className="py-3 px-1">Username</th>
-                )}
-                {selectedColumns.includes("method") && (
-                  <th className="px-5 py-3">Method</th>
-                )}
-                 {selectedColumns.includes("status") && (
-                  <th className="px-5 py-3">Status</th>
-                )}
-                {selectedColumns.includes("ip") && (
-                  <th className=" py-5 px-3">IP</th>
-                )}
+          <div className="sticky top-0 bg-white z-10">
+            <table className="w-full text-sm text-left text-gray-500">
+              <thead className="bg-gradient-to-tl text-white from-[#614385] to-[#516395] text-xs uppercase sticky top-0 z-20">
+                <tr>
+                  {selectedColumns.includes("userId") && (
+                    <th className="px-2 py-3">User ID</th>
+                  )}
+                  {selectedColumns.includes("username") && (
+                    <th className="py-3 px-1">Username</th>
+                  )}
+                  {selectedColumns.includes("method") && (
+                    <th className="px-5 py-3">Method</th>
+                  )}
+                  {selectedColumns.includes("status") && (
+                    <th className="px-5 py-3">Status</th>
+                  )}
+                  {selectedColumns.includes("ip") && (
+                    <th className=" py-5 px-3">IP</th>
+                  )}
                   {selectedColumns.includes("path") && (
-                  <th className="px-20 py-3">Path</th>
-                )}
-                {selectedColumns.includes("time") && (
-                  <th className="pl-10 pr-20">Time</th>
-                )} 
-              </tr>
-            </thead>
+                    <th className="px-20 py-3">Path</th>
+                  )}
+                  {selectedColumns.includes("time") && (
+                    <th className="pl-10 pr-20">Time</th>
+                  )}
+                </tr>
+              </thead>
             </table>
           </div>
 
           <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
-          <table className="w-full text-sm text-left  text-gray-500">
-            <tbody className="bg-white">
-              {loading ? (
-                <tr>
-                  <td
-                    colSpan={selectedColumns.length || 1}
-                    className="p-3 text-center"
-                  >
-                    Loading...
-                  </td>
-                </tr>
-              ) : filteredLogs.length > 0 ? (
-                filteredLogs.map((log: any, i) => (
-                  <tr key={i} className="border-b hover:bg-gray-50 ">
-                     {selectedColumns.includes("userId") && (
-                      <td className="py-3 px-8">{log.userId}</td>
-                    )}
-                     {selectedColumns.includes("username") && (
-                      <td className="py-3 px-5">{log.username}</td>
-                    )}
-                     {selectedColumns.includes("method") && (
-                      <td className="py-3 px-6">{log.method}</td>
-                    )}
-                       {selectedColumns.includes("status") && (
-                      <td className="py-3 px-8">{log.status}</td>
-                    )}
-                    {selectedColumns.includes("ip") && (
-                      <td className="py-3 px-4">{log.ip}</td>
-                    )}
-                    {selectedColumns.includes("path") && (
-                      <td className="p-3 px-8">{log.path.length > 15 ? `${log.path.slice(0, 15)}...` : log.path}</td>
-                    )}
-                    {selectedColumns.includes("time") && (
-                      <td className="py-3">
-                        {new Date(log.time).toLocaleString()}
-                      </td>
-                    )}
+            <table className="w-full text-sm text-left  text-gray-500">
+              <tbody className="bg-white">
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan={selectedColumns.length || 1}
+                      className="p-3 text-center"
+                    >
+                      Loading...
+                    </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={selectedColumns.length || 1}
-                    className="p-3 text-center"
-                  >
-                    No logs found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                ) : filteredLogs.length > 0 ? (
+                  filteredLogs.map((log: any, i) => (
+                    <tr key={i} className="border-b hover:bg-gray-50 ">
+                      {selectedColumns.includes("userId") && (
+                        <td className="py-3 px-8">{log.userId}</td>
+                      )}
+                      {selectedColumns.includes("username") && (
+                        <td className="py-3 px-5">{log.username}</td>
+                      )}
+                      {selectedColumns.includes("method") && (
+                        <td className="py-3 px-6">{log.method}</td>
+                      )}
+                      {selectedColumns.includes("status") && (
+                        <td className="py-3 px-8">{log.status}</td>
+                      )}
+                      {selectedColumns.includes("ip") && (
+                        <td className="py-3 px-4">{log.ip}</td>
+                      )}
+                      {selectedColumns.includes("path") && (
+                        <td className="p-3 px-8">
+                          {log.path.length > 15
+                            ? `${log.path.slice(0, 15)}...`
+                            : log.path}
+                        </td>
+                      )}
+                      {selectedColumns.includes("time") && (
+                        <td className="py-3">
+                          {new Date(log.time).toLocaleString()}
+                        </td>
+                      )}
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={selectedColumns.length || 1}
+                      className="p-3 text-center"
+                    >
+                      No logs found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
 
           <div className="flex items-center justify-between p-4 bg-gradient-to-tl text-white from-[#614385] to-[#516395] border-t">
-            <p className="text-sm ">
-              Total Logs: {filteredLogs.length}
-            </p>
+            <p className="text-sm ">Total Logs: {filteredLogs?.length}</p>
           </div>
         </div>
       </div>

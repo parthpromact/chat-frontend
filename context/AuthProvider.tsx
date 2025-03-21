@@ -16,16 +16,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const router = useRouter();
 
   const selectAuthState = (state: any) => state.auth;
-  const { isAuthenticated, user } = useSelector(selectAuthState);
-  console.log("🚀 ~ AuthProvider ~ isAuthenticated:", isAuthenticated)
+  const { user } = useSelector(selectAuthState);
+
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
       router.push("/login");
+      setIsAuthenticated(false);
+    } else {
+      setIsAuthenticated(true);
     }
   }, []);
-  
+
   interface LoginParams {
     email: string;
     password: string;
@@ -34,18 +38,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async ({ email, password }: LoginParams) => {
     try {
       const res = await dispatch(loginAsync({ email, password }));
-      console.log("🚀 ~ login ~ res:", res)
-      if(res.payload) {
-        toast.success(res.payload.message || "Logged in successfully");
-        router.push('/chat');
+      if (res?.payload) {
+        toast.success(res?.payload?.message || "Logged in successfully");
+        router.push("/chat");
       }
     } catch (error) {
-      console.log("error:", error)
+      console.log("error:", error);
     }
-      
-}
+  };
 
-  const logout = async () => {
+  const logoutUser = async () => {
     try {
       await dispatch(logout());
       router.push("/login");
@@ -55,7 +57,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, logoutUser }}>
       <>
         <Toaster />
         {children}
@@ -65,4 +67,3 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
-

@@ -1,4 +1,9 @@
-import { createSlice, current, isRejectedWithValue, PayloadAction } from "@reduxjs/toolkit";
+import {
+  createSlice,
+  current,
+  isRejectedWithValue,
+  PayloadAction,
+} from "@reduxjs/toolkit";
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -28,13 +33,14 @@ export const conversationMessages = createAsyncThunk(
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-      return { 
-        message: response.data.message,
-        data: response.data.data
-      }
+      return {
+        message: response?.data?.message,
+        data: response?.data?.data,
+      };
     } catch (error: any) {
-      if (error.response) {
-        const message = error.response.data.message || "Something went wrong";
+      if (error?.response) {
+        const message =
+          error?.response?.data?.message || "Something went wrong";
         toast.error(message);
         return isRejectedWithValue(message);
       } else {
@@ -52,12 +58,15 @@ const messageSlice = createSlice({
     builder.addCase(conversationMessages.pending, (state, action) => {
       state.loading = true;
     });
-    builder.addCase(conversationMessages.fulfilled, (state, action: PayloadAction<any>) => {
-      state.messages = action.payload.data.messages;
-      state.totalPages = action.payload.data.totalPage;
-      state.currentPage = action.payload.data.currentPage;
-      state.loading = false;
-    });
+    builder.addCase(
+      conversationMessages.fulfilled,
+      (state, action: PayloadAction<any>) => {
+        state.messages = action?.payload?.data?.messages;
+        state.totalPages = action?.payload?.data?.totalPage;
+        state.currentPage = action?.payload?.data?.currentPage;
+        state.loading = false;
+      }
+    );
     builder.addCase(conversationMessages.rejected, (state, action) => {
       state.loading = false;
     });

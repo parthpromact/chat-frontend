@@ -23,6 +23,7 @@ const Login = () => {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm({ resolver: yupResolver(loginSchema) });
 
@@ -30,11 +31,12 @@ const Login = () => {
 
   const onSubmit = async (data: { email: string; password: string }) => {
     login(data);
+    reset();
   };
 
   return (
     <div className="flex justify-center items-center w-screen mx-auto h-screen my-auto">
-        <Toaster />
+      <Toaster />
       <div className="w-[400px] h-[420px] rounded-xl shadow-lg shadow-blue-500/50  border-1 border-blue-500 bg-gradient-to-bl from-[#A9F1DF] to-[#FFBBBB]">
         <div className="flex flex-col my-8">
           <div className="flex justify-center gap-2 mb-2">
@@ -101,9 +103,7 @@ const Login = () => {
                   {...register("email")}
                 />
                 {errors && errors.email && (
-                  <p className="text-red-500 text-xs">
-                    {errors.email.message}
-                  </p>
+                  <p className="text-red-500 text-xs">{errors.email.message}</p>
                 )}
               </div>
               <div className="flex flex-col mt-5 w-full px-10">
@@ -136,10 +136,10 @@ const Login = () => {
                     className="absolute top-0 right-0 p-2"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    {showPassword ? <FaEyeSlash  /> : <FaEye/>}
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
                 </div>
-               
+
                 {errors && errors.password && (
                   <p className="text-red-500 text-xs">
                     {errors.password.message}
@@ -170,4 +170,3 @@ const Login = () => {
 };
 
 export default Login;
-

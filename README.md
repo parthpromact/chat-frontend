@@ -1,40 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# Chat App
 
-## Getting Started
+This is a simple chat app built with Typescript, React, Next.js, Redux, and Tailwind CSS.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Login User
+- Register User
+- User authentication using JWT
+- Real-time messaging
+- User list
+- Chat body
+- Message sending
+- Message editing
+- Message deletion
+- User Logs List
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Technologies Used
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+- Typescript
+- Next.js
+- React
+- Redux
+- Tailwind CSS
+- React Hot Toast
+- Yup
+- React Hook Form
+- Axios
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+## How to Run
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+- Clone the repository
+- Run `npm install` to install dependencies
+- Run `npm run dev` to start the development server
+- Open `http://localhost:3000` in your browser
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How to Use
 
-## Learn More
+- Register a new user
+- Login with your credentials
+- You will be redirected to the chat page
+- You can send messages to other users
+- You can edit or delete your own messages
+- You can view the user list
+- You can view your Logs 
 
-To learn more about Next.js, take a look at the following resources:
+## Environment Variable
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+- `NEXT_PUBLIC_API_URL`: URL of the backend API
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Author
 
-## Deploy on Vercel
+Parth Patel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+
